@@ -1,4 +1,4 @@
-import os
+import time
 import streamlit as st
 from google import genai
 
@@ -16,14 +16,12 @@ st.markdown("""
     font-size: 36px;
     font-weight: bold;
 }
-
 .subtitle {
     text-align: center;
     color: #666;
     font-size: 18px;
     margin-bottom: 25px;
 }
-
 .topic {
     background: #eaf2f8;
     padding: 20px;
@@ -34,7 +32,6 @@ st.markdown("""
     color: #17365d;
     margin: 20px 0;
 }
-
 .card {
     background: white;
     border: 1px solid #d5dce5;
@@ -42,11 +39,9 @@ st.markdown("""
     padding: 20px;
     margin: 10px 0;
 }
-
 .card h3 {
     color: #17365d;
 }
-
 .footer {
     text-align: center;
     color: #777;
@@ -86,20 +81,18 @@ if st.button("🧠 Generate AI Concept Map", type="primary"):
 
     if not topic.strip():
         st.warning("Please enter an academic topic.")
+        st.stop()
 
-    else:
+    try:
+        api_key = st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        st.error("Gemini API key was not found.")
+        st.stop()
 
-        api_key = os.getenv("GEMINI_API_KEY")
+    try:
+        client = genai.Client(api_key=api_key)
 
-        if not api_key:
-            st.error("Gemini API key was not found.")
-            st.stop()
-
-        try:
-
-            client = genai.Client(api_key=api_key)
-
-            prompt = f"""
+        prompt = f"""
 You are an academic teaching assistant.
 
 Create a clear academic concept map for:
@@ -148,90 +141,103 @@ Write one short paragraph.
 Do not add any other headings.
 """
 
-            with st.spinner("Generating concepts using Gemini..."):
+        response = None
 
-                response = client.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=prompt
-                )
+        with st.spinner("Generating concepts using Gemini..."):
 
-            if not response or not response.text:
-                st.error("Gemini did not return any information.")
-                st.stop()
+            for attempt in range(3):
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-3.8-flash",
+                        contents=prompt
+                    )
+                    break
 
-            text = response.text
+                except Exception as e:
+                    if "503" in str(e) and attempt < 2:
+                        time.sleep(5)
+                    else:
+                        raise e
 
-            st.success("AI concept map generated successfully!")
+        if not response or not response.text:
+            st.error("Gemini did not return any information.")
+            st.stop()
 
-            st.markdown(
-                f'<div class="topic">📘 {topic}</div>',
-                unsafe_allow_html=True
-            )
+        text = response.text
 
-            st.header("🧠 AI-Generated Concept Map")
+        st.success("AI concept map generated successfully!")
 
-            sections = [
-                "INTRODUCTION:",
-                "CORE CONCEPTS:",
-                "TYPES:",
-                "APPLICATIONS:",
-                "ADVANTAGES:",
-                "CHALLENGES:",
-                "FUTURE SCOPE:",
-                "SUMMARY:"
-            ]
+        st.markdown(
+            f'<div class="topic">📘 {topic}</div>',
+            unsafe_allow_html=True
+        )
 
-            parts = {}
-            current = None
+        st.header("🧠 AI-Generated Concept Map")
 
-            for line in text.splitlines():
+        sections = [
+            "INTRODUCTION:",
+            "CORE CONCEPTS:",
+            "TYPES:",
+            "APPLICATIONS:",
+            "ADVANTAGES:",
+            "CHALLENGES:",
+            "FUTURE SCOPE:",
+            "SUMMARY:"
+        ]
 
-                line = line.strip()
+        parts = {}
+        current = None
 
-                if not line:
-                    continue
+        for line in text.splitlines():
 
-                upper = line.upper()
+            line = line.strip()
 
-                matched = False
+            if not line:
+                continue
 
-                for section in sections:
-
-                    if upper.startswith(section):
-
-                        current = section.replace(":", "")
-                        parts[current] = []
-                        matched = True
-                        break
-
-                if not matched and current:
-                    parts[current].append(line)
+            upper = line.upper()
+            matched = False
 
             for section in sections:
 
-                name = section.replace(":", "")
+                if upper.startswith(section):
 
-                if name not in parts:
-                    continue
+                    current = section.replace(":", "")
+                    parts[current] = []
+                    matched = True
+                    break
 
-                content = parts[name]
+            if not matched and current:
+                parts[current].append(line)
 
-                st.markdown(
-                    f'<div class="card"><h3>{name.title()}</h3>',
-                    unsafe_allow_html=True
-                )
+        for section in sections:
 
-                for item in content:
+            name = section.replace(":", "")
 
-                    item = item.lstrip("-•* ")
+            if name not in parts:
+                continue
 
-                    if item:
-                        st.write("• " + item)
+            st.markdown(
+                f'<div class="card"><h3>{name.title()}</h3>',
+                unsafe_allow_html=True
+            )
 
-                st.markdown("</div>", unsafe_allow_html=True)
+            for item in parts[name]:
 
-        except Exception as e:
+                item = item.lstrip("-•* ")
 
+                if item:
+                    st.write("• " + item)
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    except Exception as e:
+
+        if "503" in str(e):
+            st.error(
+                "Gemini is temporarily busy. Please try again after a few seconds."
+            )
+        else:
             st.error("Gemini generation failed.")
             st.code(str(e))
 
