@@ -26,7 +26,7 @@ streamlit run app.py
 
 ## 🌐 Live Demo
 
-👉  https://ai-based-academic-concept-mapping-system.streamlit.app
+👉  https://ai-based-academic-concept-mapping-system-4kc6hw39ohww68cukdshp.streamlit.app
 
 ## 💡 Example
 
