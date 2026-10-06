@@ -10,45 +10,89 @@ st.set_page_config(
 
 st.markdown("""
 <style>
+
+.stApp {
+    background-color: #f5f7fb;
+}
+
 .title {
     text-align: center;
-    color: #17365d;
+    color: #12355b !important;
     font-size: 36px;
     font-weight: bold;
 }
+
 .subtitle {
     text-align: center;
-    color: #666;
+    color: #444444 !important;
     font-size: 18px;
     margin-bottom: 25px;
 }
+
 .topic {
-    background: #eaf2f8;
+    background-color: #dceeff;
     padding: 20px;
     border-radius: 12px;
     text-align: center;
     font-size: 26px;
     font-weight: bold;
-    color: #17365d;
+    color: #12355b !important;
     margin: 20px 0;
+    border: 1px solid #b8d5f0;
 }
+
 .card {
-    background: white;
-    border: 1px solid #d5dce5;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
     border-radius: 12px;
     padding: 20px;
-    margin: 10px 0;
+    margin: 12px 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
+
 .card h3 {
-    color: #17365d;
+    color: #12355b !important;
+    font-size: 22px;
 }
+
+h1, h2, h3, h4 {
+    color: #12355b !important;
+}
+
+p {
+    color: #222222 !important;
+    font-size: 16px;
+}
+
+label {
+    color: #222222 !important;
+    font-weight: 600;
+}
+
+.stTextInput input {
+    background-color: #ffffff !important;
+    color: #222222 !important;
+    border: 1px solid #9ca3af !important;
+}
+
+.stTextInput input::placeholder {
+    color: #777777 !important;
+}
+
+.stButton button {
+    font-weight: bold;
+}
+
 .footer {
     text-align: center;
-    color: #777;
+    color: #555555 !important;
     margin-top: 35px;
+    padding: 15px;
 }
+
 </style>
 """, unsafe_allow_html=True)
+
 
 st.markdown(
     '<div class="title">AI-Based Academic Concept Mapping System</div>',
@@ -90,6 +134,7 @@ if st.button("🧠 Generate AI Concept Map", type="primary"):
         st.stop()
 
     try:
+
         client = genai.Client(api_key=api_key)
 
         prompt = f"""
@@ -146,14 +191,18 @@ Do not add any other headings.
         with st.spinner("Generating concepts using Gemini..."):
 
             for attempt in range(3):
+
                 try:
+
                     response = client.models.generate_content(
                         model="gemini-3.5-flash-lite",
                         contents=prompt
                     )
+
                     break
 
                 except Exception as e:
+
                     if "503" in str(e) and attempt < 2:
                         time.sleep(5)
                     else:
@@ -234,12 +283,17 @@ Do not add any other headings.
     except Exception as e:
 
         if "503" in str(e):
+
             st.error(
-                "Gemini is temporarily busy. Please try again after a few seconds."
+                "Gemini is temporarily busy. "
+                "Please try again after a few seconds."
             )
+
         else:
+
             st.error("Gemini generation failed.")
             st.code(str(e))
+
 
 st.markdown(
     """
